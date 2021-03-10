@@ -36,13 +36,13 @@ zx0_copy           tfr u,y             ; get current buffer address
                    bcc zx0_literals    ; branch if next block is literals
 
 ; 1 - copy from new offset (repeat N bytes from new offset)
-zx0_new_offset     bsr zx0_elias       ; obtain offset MSB
+zx0_new_offset     bsr zx0_elias       ; obtain MSB offset
                    comf                ; adjust for negative offset (set carry for RORW below)
                    incf                ;   "     "    "       "
-                   beq zx0_eof         ; eof? (length = 256) if so exit
+                   beq zx0_eof         ; eof? (offset = 256) if so exit
                    tfr f,e             ; move to MSB position
                    ldf ,x+             ; obtain LSB offset
-                   rorw                ; last offset bit becomes first length bit
+                   rorw                ; offset bit #0 becomes first length bit
                    tfr w,v             ; preserve new offset
                    ldw #1              ; set elias = 1
                    bcs skip@           ; test first length bit
