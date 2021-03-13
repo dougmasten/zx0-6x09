@@ -1,6 +1,5 @@
 ; zx0_6309_standard.asm - ZX0 decompressor for H6309 - 75 bytes
-; Written by Doug Masten
-; Based on the ZX0 Z-80 decompressor by Einar Saukas
+; Written by Doug Masten, based on the ZX0 Z-80 decompressor by Einar Saukas.
 ;
 ; ZX0 compression algorithms are (c) 2021 Einar Saukas,
 ; see https://github.com/einar-saukas/ZX0
