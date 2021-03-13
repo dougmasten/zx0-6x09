@@ -63,7 +63,7 @@ loop@              ldb ,y+             ; copy match
                    stb ,u+
                    leax -1,x
                    bne loop@
-zx0_save_x         puls x              ; restore reg X
+                   puls x              ; restore reg X
                    lsl zx0_bit         ; get next bit
                    bcc zx0_literals
 
