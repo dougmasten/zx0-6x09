@@ -34,7 +34,7 @@ zx0_bit            equ ZX0_VAR1        ; use DP memory
 zx0_decompress
                    ifndef ZX0_ONE_TIME_USE
                      ldd #$ffff
-                     std zx0_offset+2  ; init offset = =1
+                     std zx0_offset+2  ; init offset = -1
                      lda #$80
                      sta zx0_bit       ; init bit stream
                    else
