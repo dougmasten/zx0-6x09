@@ -61,13 +61,13 @@ zx0_decompress
 
 ; 0 - literal (copy next N bytes from compressed data)
 zx0_literals       bsr zx0_elias       ; obtain length
-                   tfr d,y
+                   tfr d,y             ;  "      "
 loop@              ldb ,x+             ; copy literals
-                   stb ,u+
-                   leay -1,y
-                   bne loop@
+                   stb ,u+             ;  "    "
+                   leay -1,y           ; decrement loop counter
+                   bne loop@           ; loop until done
                    lsl zx0_bit         ; get next bit
-                   bcs zx0_new_offset
+                   bcs zx0_new_offset  ; branch if next block is new-offset
 
 ; 0 - copy from last offset (repeat N bytes from last offset)
                    bsr zx0_elias       ; obtain length
@@ -75,12 +75,12 @@ zx0_copy           pshs x              ; save reg X
                    tfr d,x             ; setup length
 zx0_offset         leay >$ffff,u       ; calculate offset address
 loop@              ldb ,y+             ; copy match
-                   stb ,u+
-                   leax -1,x
-                   bne loop@
+                   stb ,u+             ;  "    "
+                   leax -1,x           ; decrement loop counter
+                   bne loop@           ; loop until done
                    puls x              ; restore reg X
                    lsl zx0_bit         ; get next bit
-                   bcc zx0_literals
+                   bcc zx0_literals    ; branch if next block is literals
 
 ; 1 - copy from new offset (repeat N bytes from new offset)
 zx0_new_offset     bsr zx0_elias       ; obtain offset MSB
@@ -100,21 +100,21 @@ skip@              addd #1             ; elias = elias + 1
 
 ; interlaced elias gamma coding
 zx0_elias          ldd #1              ; set elias = 1
-                   bra start@
+                   bra start@          ; goto start of elias gamma coding
 ;
 zx0_backtrace
 loop@              lsl zx0_bit         ; get next bit
-                   rolb
-                   rola
+                   rolb                ; rotate elias value
+                   rola                ;   "     "     "
 start@             lsl zx0_bit         ; get next bit
-                   bne skip@
+                   bne skip@           ; branch if bit stream is not empty
                    pshs a              ; save reg A
                    lda ,x+             ; load another 8-bits
                    rola                ; get next bit
                    sta zx0_bit         ; save bit stream
                    puls a              ; restore reg A
-skip@              bcc loop@
-zx0_eof            rts
+skip@              bcc loop@           ; loop until done
+zx0_eof            rts                 ; return
 
 
 ; bit stream
