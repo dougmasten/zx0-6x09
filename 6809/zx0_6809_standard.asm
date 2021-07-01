@@ -94,10 +94,9 @@ zx0_new_offset     bsr zx0_elias       ; obtain offset MSB
                    ldd #1              ; set elias = 1
                    bcs skip@           ; test first length bit
                    bsr zx0_backtrace   ; get elias but skip first bit
-skip@              ; addd #1             ; elias = elias + 1
-                    INCB                  ; Tiny change to save a couple of CPU cycles
-                    BNE zx0_copy        
-                    INCA
+skip@              incb                ; elias = elias + 1
+                   bne zx0_copy        ; if no carryover, branch to copy new offset match
+                   inca                ; increment MSB elias carryover
                    bra zx0_copy        ; copy new offset match
 
 
