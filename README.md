@@ -6,7 +6,7 @@
 
 To compress a file, use the command-line compressor from https://github.com/einar-saukas/ZX0.
 
-_**WARNING**: The ZX0 file format was changed in version 2. This library still uses version 1. Execute the ZX0 compressor using the parameter "-c" to compression using version 1 file format._
+_**WARNING**: The ZX0 file format was changed in version 2. This library still uses version 1. Execute the ZX0 compressor using the parameter "-c" to compress using version 1 file format._
 
 ## Projects using **zx0-6x09**:
 
