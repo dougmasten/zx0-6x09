@@ -1,4 +1,4 @@
-; zx0_6809_turbo.asm - ZX0 decompressor for M6809 - 146 bytes
+; zx0_6809_turbo.asm - ZX0 decompressor for M6809 - 144 bytes
 ;
 ; Copyright (c) 2021 Doug Masten
 ; ZX0 compression (c) 2021 Einar Saukas, https://github.com/einar-saukas/ZX0
@@ -90,7 +90,7 @@ zx0_new_offset     ldb #1              ; set elias = 1 (not necessary to set MSB
                    stb <zx0_offset+3   ; save LSB offset
                    ldb #1              ; set elias = 1
                    bcs skip@           ; test first length bit
-                   bsr zx0_backtrace   ; get elias but skip first bit
+                   bsr zx0_elias_bt    ; get elias but skip first bit
 skip@              incb                ; elias = elias + 1
                    stb <zx0_code+2     ;  " "
                    bne zx0_copy        ;  " "
@@ -126,37 +126,41 @@ zx0_last_offset    ldb #1              ; set elias = 1
                    stb <zx0_code+2     ; save LSB elias
                    bra zx0_copy        ; go copy last offset block
 
-
-; rotate next bit into elias value
-zx0_elias_rotate   macro
-                   lsla                ; get next bit
-                   rolb                ; rotate bit into elias value
-                   rol <zx0_code+1     ;   "     "   "    "
-                   lsla                ; get next bit
-                   endm
-
 ; interlaced elias gamma coding
-zx0_backtrace
+zx0_elias_bt
 loop@              lsla                ; get next bit
-                   rolb                ; rotate elias value
-                   rol <zx0_code+1     ;  "      "      "
+                   rolb                ; rotate elias LSB value
 zx0_elias          lsla                ; get next bit
                    beq zx0_reload      ; branch if bit stream is empty
                    bcc loop@           ; loop until done
 zx0_rts            rts                 ; return
 
 ; reload bit stream and process elias gamma coding
-loop@              zx0_elias_rotate    ; rotate elias value
 zx0_reload         lda ,x+             ; load another group of 8 bits
-                   rola                ; get next bit
-                   bcs zx0_rts         ; exit if done
-                   zx0_elias_rotate    ; rotate elias value
-                   bcs zx0_rts         ; exit if done
-                   zx0_elias_rotate    ; rotate elias value
-                   bcs zx0_rts         ; exit if done
-                   zx0_elias_rotate    ; rotate elias value
-                   bcc loop@           ; loop until done
-                   rts                 ; return
+                   rola                ; are we done?
+                   bcs zx0_rts         ; yes, exit
+                   lsla                ; get next bit
+                   rolb                ; rotate bit into elias value
+                   lsla                ; are we done?
+                   bcs zx0_rts         ; yes, exit
+                   lsla                ; get next bit
+                   rolb                ; rotate bit into elias value
+                   lsla                ; are we done?
+                   bcs zx0_rts         ; yes, exit
+                   lsla                ; get next bit
+                   rolb                ; rotate bit into elias value
+                   lsla                ; are we done?
+
+; long elias gamma coding
+zx0_long_elias     bcs zx0_rts         ; yes, exit if done
+                   lsla                ; get next bit
+                   rolb                ; rotate bit into elias value
+                   rol <zx0_code+1     ;  "      "   "    "     "
+                   lsla                ; is bit stream empty?
+                   bne zx0_long_elias  ; no, loop again
+                   lda ,x+             ; reload bit stream
+                   rola                ; are we done?
+                   bra zx0_long_elias  ; loop again
 
 
 ; safety check
