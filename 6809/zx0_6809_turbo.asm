@@ -119,16 +119,14 @@ zx0_last_offset    ldb #1              ; set elias = 1
                    bra zx0_copy        ; go copy last offset block
 
 ; interlaced elias gamma coding
-zx0_elias_bt
-loop@              lsla                ; get next bit
+loop@              bcs zx0_rts         ; have full elias value? exit
+zx0_elias_bt       lsla                ; get next bit
                    rolb                ; rotate elias LSB value
 zx0_elias          lsla                ; get next bit
-                   beq zx0_reload      ; branch if bit stream is empty
-                   bcc loop@           ; loop until done
-zx0_rts            rts                 ; return
+                   bne loop@           ; if bit stream is not empty, loop
 
 ; reload bit stream and process elias gamma coding
-zx0_reload         lda ,x+             ; load another group of 8 bits
+                   lda ,x+             ; load another group of 8 bits
                    rola                ; are we done?
                    bcs zx0_rts         ; yes, exit
                    lsla                ; get next bit
@@ -142,17 +140,18 @@ zx0_reload         lda ,x+             ; load another group of 8 bits
                    lsla                ; get next bit
                    rolb                ; rotate bit into elias value
                    lsla                ; are we done?
+                   bcs zx0_rts         ; yes, exit
 
 ; long elias gamma coding
-zx0_long_elias     bcs zx0_rts         ; yes, exit if done
-                   lsla                ; get next bit
+loop@              lsla                ; get next bit
                    rolb                ; rotate bit into elias value
                    rol <zx0_code+1     ;  "      "   "    "     "
                    lsla                ; is bit stream empty?
-                   bne zx0_long_elias  ; no, loop again
+                   bne skip@           ; no, branch
                    lda ,x+             ; reload bit stream
                    rola                ; are we done?
-                   bra zx0_long_elias  ; loop again
+skip@              bcc loop@           ; no, loop again
+zx0_rts            rts                 ; return
 
 ; exit
                    ifndef ZX0_DISABLE_SAVE_REGS
