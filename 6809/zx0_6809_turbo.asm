@@ -80,7 +80,7 @@ zx0_eof            equ zx0_rts         ; just exit
 ; 1 - copy from new offset (repeat N bytes from new offset)
 zx0_new_offset     ldb #1              ; set elias = 1 (not necessary to set MSB)
                    bsr zx0_elias       ; obtain MSB offset
-                   clr <zx0_code+2     ; set MSB elias for below
+                   clr <zx0_code+1     ; set MSB elias for below
                    negb                ; adjust for negative offset (set carry for RORB below)
                    beq zx0_eof         ; eof? (length = 256) if so exit
                    rorb                ; last offset bit becomes first length bit
