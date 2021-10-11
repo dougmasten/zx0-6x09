@@ -69,20 +69,12 @@ zx0_dp             equ */256
                    bra zx0_literals    ; start with literals
 
 
-; exit
-                   ifndef ZX0_DISABLE_SAVE_REGS
-zx0_eof            puls cc,dp,pc       ; restore registers and exit
-                   else
-zx0_eof            equ zx0_rts         ; just exit
-                   endc
-
-
 ; 1 - copy from new offset (repeat N bytes from new offset)
 zx0_new_offset     ldb #1              ; set elias = 1 (not necessary to set MSB)
                    bsr zx0_elias       ; obtain MSB offset
                    clr <zx0_code+1     ; set MSB elias for below
                    negb                ; adjust for negative offset (set carry for RORB below)
-                   beq zx0_eof         ; eof? (length = 256) if so exit
+                   beq zx0_exit        ; eof? (length = 256) if so exit
                    rorb                ; last offset bit becomes first length bit
                    stb <zx0_offset+2   ; save MSB offset
                    ldb ,x+             ; load LSB offset
@@ -162,6 +154,12 @@ zx0_long_elias     bcs zx0_rts         ; yes, exit if done
                    rola                ; are we done?
                    bra zx0_long_elias  ; loop again
 
+; exit
+                   ifndef ZX0_DISABLE_SAVE_REGS
+zx0_exit           puls cc,dp,pc       ; restore registers and exit
+                   else
+zx0_exit           equ zx0_rts         ; just exit
+                   endc
 
 ; safety check
 zx0_dp_end         equ */256
