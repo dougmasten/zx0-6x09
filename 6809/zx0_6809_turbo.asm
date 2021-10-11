@@ -27,7 +27,7 @@
 ; Exit        : Reg X = end of compressed data + 1
 ;             : Reg U = end of decompression buffer + 1
 ; Destroys    : Regs D, Y
-; Description : Decompress ZX0 data
+; Description : Decompress ZX0 data (version 1)
 ;------------------------------------------------------------------------------
 ; Options:
 ;

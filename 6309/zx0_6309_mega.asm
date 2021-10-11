@@ -54,7 +54,7 @@ done@              equ *
 ; Exit        : Reg X = end of compressed data + 1
 ;             : Reg U = end of decompression buffer + 1
 ; Destroys    : Regs D, V, W, Y
-; Description : Decompress ZX0 data
+; Description : Decompress ZX0 data (version 1)
 ;------------------------------------------------------------------------------
 zx0_decompress
                    ldq #$ffff0001      ; init offset = -1 and elias = 1
