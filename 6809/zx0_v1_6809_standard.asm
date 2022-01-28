@@ -1,4 +1,4 @@
-; zx0_6809_standard.asm - ZX0 decompressor for M6809 - 109 bytes
+; zx0_v1_6809_standard.asm - ZX0 decompressor for M6809 - 109 bytes
 ;
 ; Copyright (c) 2021 Doug Masten
 ; ZX0 compression (c) 2021 Einar Saukas, https://github.com/einar-saukas/ZX0
