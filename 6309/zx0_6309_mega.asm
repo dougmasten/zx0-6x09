@@ -20,13 +20,6 @@
 ; 3. This notice may not be removed or altered from any source distribution.
 
 
-; rotate next bit into elias value
-zx0_elias_rotate   macro
-                   lsla                ; get next bit
-                   rolw                ; rotate bit into elias value
-                   lsla                ; get next bit
-                   endm
-
 ; only get one bit from stream
 zx0_get_1bit       macro
                    lsla                ; get next bit
@@ -37,9 +30,11 @@ done@              equ *
                    endm
 
 ; get elias value
-zx0_get_elias      macro
+zx0_elias_bt       macro
                    bcs done@
-loop@              zx0_elias_rotate
+loop@              lsla                ; get next bit
+                   rolw                ; rotate bit into elias value
+                   lsla                ; get next bit
                    bcc loop@           ; loop until done
                    bne done@           ; is bit stream empty? no, branch
                    bsr zx0_reload      ; process rest of elias until done
@@ -56,16 +51,14 @@ done@              equ *
 ; Destroys    : Regs D, V, W, Y
 ; Description : Decompress ZX0 data (version 1)
 ;------------------------------------------------------------------------------
-zx0_decompress
-                   ldq #$ffff0001      ; init offset = -1 and elias = 1
+zx0_decompress     ldq #$ffff0001      ; init offset = -1 and elias = 1
                    tfr d,v             ; preserve offset
                    lda #$80            ; init bit stream
                    bra zx0_literals
 
 ; 1 - copy from new offset (repeat N bytes from new offset)
-zx0_new_offset
-                   zx0_get_1bit
-                   zx0_get_elias
+zx0_new_offset     zx0_get_1bit
+                   zx0_elias_bt
                    comf
                    incf
                    beq zx0_rts
@@ -74,7 +67,7 @@ zx0_new_offset
                    rorw
                    tfr w,v
                    ldw #1              ; set elias = 1
-                   zx0_get_elias
+                   zx0_elias_bt
                    incw
 zx0_copy           tfr u,y
                    addr v,y
@@ -84,9 +77,8 @@ zx0_copy           tfr u,y
                    bcs zx0_new_offset
 
 ; 0 - literal (copy next N bytes)
-zx0_literals
-                   zx0_get_1bit
-                   zx0_get_elias
+zx0_literals       zx0_get_1bit
+                   zx0_elias_bt
                    tfm x+,u+           ; copy literals
                    incw                ; set elias = 1
                    lsla                ; copy from last offset or new offset?
@@ -94,19 +86,27 @@ zx0_literals
 
 ; 0 - copy from last offset (repeat N bytes from last offset)
                    zx0_get_1bit
-                   zx0_get_elias
+                   zx0_elias_bt
                    bra zx0_copy
 
 
 ; interlaced elias gamma coding
-loop@              zx0_elias_rotate
+loop@              lsla                ; get next bit
+                   rolw                ; rotate bit into elias value
+                   lsla                ; get next bit
 zx0_reload         lda ,x+             ; load another group of 8 bits
                    rola
                    bcs zx0_rts
-                   zx0_elias_rotate
+                   lsla                ; get next bit
+                   rolw                ; rotate bit into elias value
+                   lsla                ; get next bit
                    bcs zx0_rts
-                   zx0_elias_rotate
+                   lsla                ; get next bit
+                   rolw                ; rotate bit into elias value
+                   lsla                ; get next bit
                    bcs zx0_rts
-                   zx0_elias_rotate
+                   lsla                ; get next bit
+                   rolw                ; rotate bit into elias value
+                   lsla                ; get next bit
                    bcc loop@
 zx0_rts            rts
