@@ -72,11 +72,11 @@ loop@              ldb ,x+             ; copy literals
 ; 0 - copy from last offset (repeat N bytes from last offset)
                    bsr zx0_elias       ; obtain length
 zx0_copy           pshs x              ; save reg X
-                   tfr d,x             ; setup length
-zx0_offset         leay >$ffff,u       ; calculate offset address
-loop@              ldb ,y+             ; copy match
+                   tfr d,y             ; setup length
+zx0_offset         leax >$ffff,u       ; calculate offset address
+loop@              ldb ,x+             ; copy match
                    stb ,u+             ;  "    "
-                   leax -1,x           ; decrement loop counter
+                   leay -1,y           ; decrement loop counter
                    bne loop@           ; loop until done
                    puls x              ; restore reg X
                    lsl zx0_bit         ; get next bit
