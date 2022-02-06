@@ -24,6 +24,10 @@
 zx0_bit            equ ZX0_VAR1        ; use DP memory
                    endc
 
+                   ifdef ZX0_VAR2
+zx0_offset         equ ZX0_VAR2        ; use DP memory
+                   endc
+
 
 ;------------------------------------------------------------------------------
 ; Function    : zx0_decompress
@@ -41,6 +45,11 @@ zx0_bit            equ ZX0_VAR1        ; use DP memory
 ;     speed optimization.
 ;       ex. ZX0_VAR1 equ $23
 ;
+;   ZX0_VAR2
+;     Defined variable to point to two bytes of DP memory for a space
+;     optimization.
+;       ex. ZX0_VAR2 equ $24
+;
 ;   ZX0_ONE_TIME_USE
 ;     Defined variable to disable re-initialization of variables. Enable
 ;     this option for one-time use of depacker for smaller code size.
@@ -49,13 +58,17 @@ zx0_bit            equ ZX0_VAR1        ; use DP memory
 zx0_decompress
                    ifndef ZX0_ONE_TIME_USE
                      ldd #$ffff
-                     std zx0_offset+2  ; init offset = -1
+                     std zx0_offset    ; init offset = -1
                      lda #$80
                      sta zx0_bit       ; init bit stream
                    else
                      ifdef ZX0_VAR1
                        lda #$80
                        sta zx0_bit     ; init bit stream
+                     endc
+                     ifdef ZX0_VAR2
+                       ldd #$ffff
+                       std zx0_offset  ; init offset = -1
                      endc
                    endc
 
@@ -69,7 +82,13 @@ zx0_literals       bsr zx0_elias       ; obtain length
                    bsr zx0_elias       ; obtain length
 zx0_copy           pshs x              ; save reg X
                    tfr d,y             ; setup length
-zx0_offset         leax >$ffff,u       ; calculate offset address
+                   ifndef ZX0_VAR2
+zx0_offset           equ *+2
+                     leax >$ffff,u     ; calculate offset address
+                   else
+                     ldd zx0_offset    ; calculate offset address
+                     leax d,u          ; from stored value
+                   endc
                    bsr zx0_copy_bytes  ; copy match
                    puls x              ; restore reg X
                    bcc zx0_literals    ; branch if next block is literals
@@ -82,7 +101,7 @@ zx0_new_offset     bsr zx0_elias       ; obtain offset MSB
                    ldb ,x+             ; obtain LSB offset
                    rora                ; last offset bit becomes first length bit
                    rorb                ;  "     "     "    "      "     "      "
-                   std zx0_offset+2    ; preserve new offset
+                   std zx0_offset      ; preserve new offset
                    ldd #1              ; set elias = 1
                    bcs skip@           ; test first length bit
                    bsr zx0_backtrace   ; get elias but skip first bit
