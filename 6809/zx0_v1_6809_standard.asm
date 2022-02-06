@@ -1,4 +1,4 @@
-; zx0_v1_6809_standard.asm - ZX0 decompressor for M6809 - 102 bytes
+; zx0_v1_6809_standard.asm - ZX0 decompressor for M6809 - 101 bytes
 ;
 ; Copyright (c) 2021 Doug Masten
 ; ZX0 compression (c) 2021 Einar Saukas, https://github.com/einar-saukas/ZX0
@@ -105,9 +105,7 @@ zx0_new_offset     bsr zx0_elias       ; obtain offset MSB
                    ldd #1              ; set elias = 1
                    bcs skip@           ; test first length bit
                    bsr zx0_backtrace   ; get elias but skip first bit
-skip@              incb                ; elias = elias + 1
-                   bne zx0_copy        ; if no carryover, branch to copy new offset match
-                   inca                ; increment MSB elias carryover
+skip@              addd #$0001         ; elias = elias + 1
                    bra zx0_copy        ; copy new offset match
 
 
