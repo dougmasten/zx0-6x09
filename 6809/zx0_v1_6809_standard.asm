@@ -1,4 +1,4 @@
-; zx0_v1_6809_standard.asm - ZX0 decompressor for M6809 - 109 bytes
+; zx0_v1_6809_standard.asm - ZX0 decompressor for M6809 - 102 bytes
 ;
 ; Copyright (c) 2021 Doug Masten
 ; ZX0 compression (c) 2021 Einar Saukas, https://github.com/einar-saukas/ZX0
@@ -62,11 +62,7 @@ zx0_decompress
 ; 0 - literal (copy next N bytes from compressed data)
 zx0_literals       bsr zx0_elias       ; obtain length
                    tfr d,y             ;  "      "
-loop@              ldb ,x+             ; copy literals
-                   stb ,u+             ;  "    "
-                   leay -1,y           ; decrement loop counter
-                   bne loop@           ; loop until done
-                   lsl zx0_bit         ; get next bit
+                   bsr zx0_copy_bytes  ; copy literals
                    bcs zx0_new_offset  ; branch if next block is new-offset
 
 ; 0 - copy from last offset (repeat N bytes from last offset)
@@ -74,12 +70,8 @@ loop@              ldb ,x+             ; copy literals
 zx0_copy           pshs x              ; save reg X
                    tfr d,y             ; setup length
 zx0_offset         leax >$ffff,u       ; calculate offset address
-loop@              ldb ,x+             ; copy match
-                   stb ,u+             ;  "    "
-                   leay -1,y           ; decrement loop counter
-                   bne loop@           ; loop until done
+                   bsr zx0_copy_bytes  ; copy match
                    puls x              ; restore reg X
-                   lsl zx0_bit         ; get next bit
                    bcc zx0_literals    ; branch if next block is literals
 
 ; 1 - copy from new offset (repeat N bytes from new offset)
@@ -117,6 +109,15 @@ start@             lsl zx0_bit         ; get next bit
                    puls a              ; restore reg A
 skip@              bcc loop@           ; loop until done
 zx0_eof            rts                 ; return
+
+; copy Y bytes from X to U and get next bit
+zx0_copy_bytes
+loop@              ldb ,x+             ; copy byte
+                   stb ,u+             ;  "    "
+                   leay -1,y           ; decrement loop counter
+                   bne loop@           ; loop until done
+                   lsl zx0_bit         ; get next bit
+                   rts
 
 
 ; bit stream
