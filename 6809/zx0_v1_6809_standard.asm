@@ -1,4 +1,4 @@
-; zx0_v1_6809_standard.asm - ZX0 decompressor for M6809 - 109 bytes
+; zx0_v1_6809_standard.asm - ZX0 decompressor for M6809 - 101 bytes
 ;
 ; Copyright (c) 2021 Doug Masten
 ; ZX0 compression (c) 2021 Einar Saukas, https://github.com/einar-saukas/ZX0
@@ -24,6 +24,10 @@
 zx0_bit            equ ZX0_VAR1        ; use DP memory
                    endc
 
+                   ifdef ZX0_VAR2
+zx0_offset         equ ZX0_VAR2        ; use DP memory
+                   endc
+
 
 ;------------------------------------------------------------------------------
 ; Function    : zx0_decompress
@@ -41,6 +45,11 @@ zx0_bit            equ ZX0_VAR1        ; use DP memory
 ;     speed optimization.
 ;       ex. ZX0_VAR1 equ $23
 ;
+;   ZX0_VAR2
+;     Defined variable to point to two bytes of DP memory for a space
+;     optimization.
+;       ex. ZX0_VAR2 equ $24
+;
 ;   ZX0_ONE_TIME_USE
 ;     Defined variable to disable re-initialization of variables. Enable
 ;     this option for one-time use of depacker for smaller code size.
@@ -49,7 +58,7 @@ zx0_bit            equ ZX0_VAR1        ; use DP memory
 zx0_decompress
                    ifndef ZX0_ONE_TIME_USE
                      ldd #$ffff
-                     std zx0_offset+2  ; init offset = -1
+                     std zx0_offset    ; init offset = -1
                      lda #$80
                      sta zx0_bit       ; init bit stream
                    else
@@ -57,29 +66,31 @@ zx0_decompress
                        lda #$80
                        sta zx0_bit     ; init bit stream
                      endc
+                     ifdef ZX0_VAR2
+                       ldd #$ffff
+                       std zx0_offset  ; init offset = -1
+                     endc
                    endc
 
 ; 0 - literal (copy next N bytes from compressed data)
 zx0_literals       bsr zx0_elias       ; obtain length
                    tfr d,y             ;  "      "
-loop@              ldb ,x+             ; copy literals
-                   stb ,u+             ;  "    "
-                   leay -1,y           ; decrement loop counter
-                   bne loop@           ; loop until done
-                   lsl zx0_bit         ; get next bit
+                   bsr zx0_copy_bytes  ; copy literals
                    bcs zx0_new_offset  ; branch if next block is new-offset
 
 ; 0 - copy from last offset (repeat N bytes from last offset)
                    bsr zx0_elias       ; obtain length
 zx0_copy           pshs x              ; save reg X
-                   tfr d,x             ; setup length
-zx0_offset         leay >$ffff,u       ; calculate offset address
-loop@              ldb ,y+             ; copy match
-                   stb ,u+             ;  "    "
-                   leax -1,x           ; decrement loop counter
-                   bne loop@           ; loop until done
+                   tfr d,y             ; setup length
+                   ifndef ZX0_VAR2
+zx0_offset           equ *+2
+                     leax >$ffff,u     ; calculate offset address
+                   else
+                     ldd zx0_offset    ; calculate offset address
+                     leax d,u          ; from stored value
+                   endc
+                   bsr zx0_copy_bytes  ; copy match
                    puls x              ; restore reg X
-                   lsl zx0_bit         ; get next bit
                    bcc zx0_literals    ; branch if next block is literals
 
 ; 1 - copy from new offset (repeat N bytes from new offset)
@@ -90,13 +101,11 @@ zx0_new_offset     bsr zx0_elias       ; obtain offset MSB
                    ldb ,x+             ; obtain LSB offset
                    rora                ; last offset bit becomes first length bit
                    rorb                ;  "     "     "    "      "     "      "
-                   std zx0_offset+2    ; preserve new offset
+                   std zx0_offset      ; preserve new offset
                    ldd #1              ; set elias = 1
                    bcs skip@           ; test first length bit
                    bsr zx0_backtrace   ; get elias but skip first bit
-skip@              incb                ; elias = elias + 1
-                   bne zx0_copy        ; if no carryover, branch to copy new offset match
-                   inca                ; increment MSB elias carryover
+skip@              addd #$0001         ; elias = elias + 1
                    bra zx0_copy        ; copy new offset match
 
 
@@ -117,6 +126,15 @@ start@             lsl zx0_bit         ; get next bit
                    puls a              ; restore reg A
 skip@              bcc loop@           ; loop until done
 zx0_eof            rts                 ; return
+
+; copy Y bytes from X to U and get next bit
+zx0_copy_bytes
+loop@              ldb ,x+             ; copy byte
+                   stb ,u+             ;  "    "
+                   leay -1,y           ; decrement loop counter
+                   bne loop@           ; loop until done
+                   lsl zx0_bit         ; get next bit
+                   rts
 
 
 ; bit stream
