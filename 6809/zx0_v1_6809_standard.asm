@@ -53,6 +53,7 @@
 ;
 zx0_decompress
 
+; assign DP memory variables if used
                    ifdef ZX0_VAR1
 zx0_bit            equ ZX0_VAR1        ; use DP memory
                    endc
@@ -61,6 +62,7 @@ zx0_bit            equ ZX0_VAR1        ; use DP memory
 zx0_offset         equ ZX0_VAR2        ; use DP memory
                    endc
 
+; initialize variables
                    ifndef ZX0_ONE_TIME_USE
                      ldd #$ffff
                      std zx0_offset    ; init offset = -1
@@ -126,7 +128,7 @@ zx0_new_offset     bsr zx0_elias       ; obtain offset MSB
                    endc
                    ldd #1              ; set elias = 1
                    bcs skip@           ; test first length bit
-                   bsr zx0_elias_bt    ; get elias but skip first bit
+                   bsr zx0_elias_bt    ; get length but skip first bit
 skip@              addd #1             ; length = length + 1
                    bra zx0_copy        ; copy new offset match
 
@@ -168,7 +170,7 @@ loop@              ldb ,x+             ; copy byte
                    rts
 
 
-; bit stream
+; assign bit stream variable if DP memory is not used
                    ifndef ZX0_VAR1
 zx0_bit            fcb $80
                    endc
