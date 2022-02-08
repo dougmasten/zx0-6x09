@@ -20,15 +20,6 @@
 ; 3. This notice may not be removed or altered from any source distribution.
 
 
-                   ifdef ZX0_VAR1
-zx0_bit            equ ZX0_VAR1        ; use DP memory
-                   endc
-
-                   ifdef ZX0_VAR2
-zx0_offset         equ ZX0_VAR2        ; use DP memory
-                   endc
-
-
 ;------------------------------------------------------------------------------
 ; Function    : zx0_decompress
 ; Entry       : Reg X = start of compressed data
@@ -56,6 +47,15 @@ zx0_offset         equ ZX0_VAR2        ; use DP memory
 ;       ex. ZX0_ONE_TIME_USE equ 1
 ;
 zx0_decompress
+
+                   ifdef ZX0_VAR1
+zx0_bit            equ ZX0_VAR1        ; use DP memory
+                   endc
+
+                   ifdef ZX0_VAR2
+zx0_offset         equ ZX0_VAR2        ; use DP memory
+                   endc
+
                    ifndef ZX0_ONE_TIME_USE
                      ldd #$ffff
                      std zx0_offset    ; init offset = -1
@@ -112,8 +112,8 @@ zx0_new_offset     bsr zx0_elias       ; obtain offset MSB
                    endc
                    ldd #1              ; set elias = 1
                    bcs skip@           ; test first length bit
-                   bsr zx0_backtrace   ; get elias but skip first bit
-skip@              addd #$0001         ; elias = elias + 1
+                   bsr zx0_elias_bt    ; get elias but skip first bit
+skip@              addd #1             ; length = length + 1
                    bra zx0_copy        ; copy new offset match
 
 
@@ -121,7 +121,7 @@ skip@              addd #$0001         ; elias = elias + 1
 zx0_elias          ldd #1              ; set elias = 1
                    bra start@          ; goto start of elias gamma coding
 ;
-zx0_backtrace
+zx0_elias_bt
 loop@              lsl zx0_bit         ; get next bit
                    rolb                ; rotate elias value
                    rola                ;   "     "     "
