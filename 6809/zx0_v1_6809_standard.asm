@@ -41,6 +41,11 @@
 ;     optimization.
 ;       ex. ZX0_VAR2 equ $24
 ;
+;   ZX0_VAR3
+;     Defined variable to point to two bytes of DP memory for a speed
+;     optimization.
+;       ex. ZX0_VAR3 equ $26
+;
 ;   ZX0_ONE_TIME_USE
 ;     Defined variable to disable re-initialization of variables. Enable
 ;     this option for one-time use of depacker for smaller code size.
@@ -80,7 +85,12 @@ zx0_literals       bsr zx0_elias       ; obtain length
 
 ; 0 - copy from last offset (repeat N bytes from last offset)
                    bsr zx0_elias       ; obtain length
-zx0_copy           pshs x              ; save reg X
+zx0_copy           equ *
+                   ifndef ZX0_VAR3
+                     pshs x            ; save reg X
+                   else
+                     stx ZX0_VAR3      ; save reg X
+                   endc
                    tfr d,y             ; setup length
                    ifndef ZX0_VAR2
 zx0_offset           equ *+2
@@ -90,7 +100,11 @@ zx0_offset           equ *+2
                      leax d,u          ; from stored value
                    endc
                    bsr zx0_copy_bytes  ; copy match
-                   puls x              ; restore reg X
+                   ifndef ZX0_VAR3
+                     puls x            ; restore reg X
+                   else
+                     ldx ZX0_VAR3      ; restore reg X
+                   endc
                    bcc zx0_literals    ; branch if next block is literals
 
 ; 1 - copy from new offset (repeat N bytes from new offset)
@@ -127,13 +141,22 @@ loop@              lsl zx0_bit         ; get next bit
                    rola                ;   "     "     "
 start@             lsl zx0_bit         ; get next bit
                    bne skip@           ; branch if bit stream is not empty
-                   pshs a              ; save reg A
+                   ifndef ZX0_VAR3
+                     pshs a            ; save reg A
+                   else
+                     sta ZX0_VAR3      ; save reg A
+                   endc
                    lda ,x+             ; load another 8-bits
                    rola                ; get next bit
                    sta zx0_bit         ; save bit stream
-                   puls a              ; restore reg A
+                   ifndef ZX0_VAR3
+                     puls a            ; restore reg A
+                   else
+                     lda ZX0_VAR3      ; restore reg A
+                   endc
 skip@              bcc loop@           ; loop until done
 zx0_eof            rts                 ; return
+
 
 ; copy Y bytes from X to U and get next bit
 zx0_copy_bytes
