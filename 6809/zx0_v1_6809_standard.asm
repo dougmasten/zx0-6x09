@@ -1,4 +1,4 @@
-; zx0_v1_6809_standard.asm - ZX0 decompressor for M6809 - 94 bytes (102 for no options)
+; zx0_v1_6809_standard.asm - ZX0 decompressor for M6809 - 93 bytes (102 for no options)
 ;
 ; Copyright (c) 2021 Doug Masten
 ; ZX0 compression (c) 2021 Einar Saukas, https://github.com/einar-saukas/ZX0
@@ -119,14 +119,15 @@ zx0_new_offset     bsr zx0_elias       ; obtain offset MSB
                      rora              ; last offset bit becomes first length bit
                      rorb              ;  "     "     "    "      "     "      "
                      std zx0_offset    ; preserve new offset
+                     ldd #1            ; set elias = 1
                    else
                      rorb              ; rotate MSB position (bit 7 is set)
                      stb zx0_offset    ; preserve new MSB offset
                      ldb ,x+           ; obtain LSB offset
                      rorb              ; last offset bit becomes first length bit
                      stb zx0_offset+1  ; preserve new LSB offset
+                     ldb #1            ; set elias = 1 (Reg A is already 0)
                    endc
-                   ldd #1              ; set elias = 1
                    bcs skip@           ; test first length bit
                    bsr zx0_elias_bt    ; get length but skip first bit
 skip@              addd #1             ; length = length + 1
