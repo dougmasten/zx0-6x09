@@ -1,4 +1,4 @@
-; zx0_v1_6809_standard.asm - ZX0 decompressor for M6809 - 93 bytes (102 for no options)
+; zx0_v1_6809_standard.asm - ZX0 decompressor for M6809 - 92 bytes (102 for no options)
 ;
 ; Copyright (c) 2021 Doug Masten
 ; ZX0 compression (c) 2021 Einar Saukas, https://github.com/einar-saukas/ZX0
@@ -64,10 +64,10 @@ zx0_offset         equ ZX0_VAR2        ; use DP memory
 
 ; initialize variables
                    ifndef ZX0_ONE_TIME_USE
-                     ldd #$ffff
-                     std zx0_offset    ; init offset = -1
-                     lda #$80
+                     ldd #$80ff
                      sta zx0_bit       ; init bit stream
+                     sex               ; reg A = $FF
+                     std zx0_offset    ; init offset = -1
                    else
                      ifdef ZX0_VAR1
                        lda #$80
