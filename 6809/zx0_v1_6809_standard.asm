@@ -1,4 +1,5 @@
 ; zx0_v1_6809_standard.asm - ZX0 decompressor for M6809 - 92 bytes (102 for no options)
+; Written for the LWTOOLS assembler, http://www.lwtools.ca/.
 ;
 ; Copyright (c) 2021 Doug Masten
 ; ZX0 compression (c) 2021 Einar Saukas, https://github.com/einar-saukas/ZX0
