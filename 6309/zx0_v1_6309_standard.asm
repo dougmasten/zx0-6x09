@@ -60,13 +60,13 @@ zx0_new_offset     bsr zx0_elias       ; obtain MSB offset
                    tfr w,v             ; preserve new offset
                    ldw #1              ; set elias = 1
                    bcs skip@           ; test first length bit
-                   bsr zx0_backtrace   ; get elias but skip first bit
-skip@              incw                ; elias = elias + 1
+                   bsr zx0_elias_bt    ; get elias but skip first bit
+skip@              incw                ; length = length + 1
                    bra zx0_copy        ; go copy new offset match
 
 
 ; interlaced elias gamma coding
-zx0_backtrace
+zx0_elias_bt
 loop@              lsla                ; get next bit
                    rolw                ; rotate bit into gamma value
 zx0_elias          lsla                ; get next bit
