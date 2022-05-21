@@ -129,22 +129,21 @@ zx0_new_offset     bsr zx0_elias       ; obtain offset MSB
                      stb zx0_offset+1  ; preserve new LSB offset
                      ldb #1            ; set elias = 1 (Reg A is already 0)
                    endc
-                   bcs skip@           ; test first length bit
+                   bcs zx0_skip1       ; test first length bit
                    bsr zx0_elias_bt    ; get length but skip first bit
-skip@              addd #1             ; length = length + 1
+zx0_skip1          addd #1             ; length = length + 1
                    bra zx0_copy        ; copy new offset match
 
 
 ; interlaced elias gamma coding
 zx0_elias          ldd #1              ; set elias = 1
-                   bra start@          ; goto start of elias gamma coding
-;
-zx0_elias_bt
-loop@              lsl zx0_bit         ; get next bit
+                   bra zx0_elias_start ; goto start of elias gamma coding
+
+zx0_elias_bt       lsl zx0_bit         ; get next bit
                    rolb                ; rotate elias value
                    rola                ;   "     "     "
-start@             lsl zx0_bit         ; get next bit
-                   bne skip@           ; branch if bit stream is not empty
+zx0_elias_start    lsl zx0_bit         ; get next bit
+                   bne zx0_skip2       ; branch if bit stream is not empty
                    ifndef ZX0_VAR3
                      pshs a            ; save reg A
                    else
@@ -158,16 +157,15 @@ start@             lsl zx0_bit         ; get next bit
                    else
                      lda ZX0_VAR3      ; restore reg A
                    endc
-skip@              bcc loop@           ; loop until done
+zx0_skip2          bcc zx0_elias_bt    ; loop until done
 zx0_eof            rts                 ; return
 
 
 ; copy Y bytes from X to U and get next bit
-zx0_copy_bytes
-loop@              ldb ,x+             ; copy byte
+zx0_copy_bytes     ldb ,x+             ; copy byte
                    stb ,u+             ;  "    "
                    leay -1,y           ; decrement loop counter
-                   bne loop@           ; loop until done
+                   bne zx0_copy_bytes  ; loop until done
                    lsl zx0_bit         ; get next bit
                    rts
 
