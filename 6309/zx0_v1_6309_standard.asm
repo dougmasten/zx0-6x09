@@ -1,4 +1,4 @@
-; zx0_v1_6309_standard.asm - ZX0 decompressor for H6309 - 75 bytes
+; zx0_v1_6309_standard.asm - ZX0 decompressor for H6309 - 73 bytes
 ; Written for the LWTOOLS assembler, http://www.lwtools.ca/.
 ;
 ; Copyright (c) 2021 Doug Masten
@@ -54,24 +54,23 @@ zx0_copy           tfr u,y             ; get current buffer address
 zx0_new_offset     bsr zx0_elias       ; obtain MSB offset
                    comf                ; adjust for negative offset (set carry for RORW below)
                    incf                ;   "     "    "       "
-                   beq zx0_eof         ; eof? (offset = 256) if so exit
+                   beq zx0_rts         ; eof? (offset = 256) if so exit
                    tfr f,e             ; move to MSB position
                    ldf ,x+             ; obtain LSB offset
                    rorw                ; offset bit #0 becomes first length bit
                    tfr w,v             ; preserve new offset
                    ldw #1              ; set elias = 1
-                   bcs zx0_skip1       ; test first length bit
-                   bsr zx0_elias_bt    ; get elias but skip first bit
-zx0_skip1          incw                ; length = length + 1
+                   bsr zx0_elias_bt    ; get length but skip first elias bit
+                   incw                ; length = length + 1
                    bra zx0_copy        ; go copy new offset match
 
 
 ; interlaced elias gamma coding
-zx0_elias_bt       lsla                ; get next bit
+zx0_elias_loop     lsla                ; get next bit
                    rolw                ; rotate bit into gamma value
 zx0_elias          lsla                ; get next bit
-                   bne zx0_skip2       ; branch if bit stream is not empty
+                   bne zx0_elias_bt    ; branch if bit stream is not empty
                    lda ,x+             ; load another group of 8 bits
                    rola                ; get next bit
-zx0_skip2          bcc zx0_elias_bt    ; loop again until done
-zx0_eof            rts                 ; return
+zx0_elias_bt       bcc zx0_elias_loop  ; loop again until done
+zx0_rts            rts                 ; return
