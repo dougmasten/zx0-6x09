@@ -1,4 +1,4 @@
-; zx0_v1_6809_standard.asm - ZX0 decompressor for M6809 - 92 bytes (102 for no options)
+; zx0_v1_6809_standard.asm - ZX0 decompressor for M6809 - 90 bytes (100 for no options)
 ; Written for the LWTOOLS assembler, http://www.lwtools.ca/.
 ;
 ; Copyright (c) 2021 Doug Masten
@@ -129,9 +129,8 @@ zx0_new_offset     bsr zx0_elias       ; obtain offset MSB
                      stb zx0_offset+1  ; preserve new LSB offset
                      ldb #1            ; set elias = 1 (Reg A is already 0)
                    endc
-                   bcs zx0_skip1       ; test first length bit
                    bsr zx0_elias_bt    ; get length but skip first bit
-zx0_skip1          addd #1             ; length = length + 1
+                   addd #1             ; length = length + 1
                    bra zx0_copy        ; copy new offset match
 
 
@@ -139,11 +138,11 @@ zx0_skip1          addd #1             ; length = length + 1
 zx0_elias          ldd #1              ; set elias = 1
                    bra zx0_elias_start ; goto start of elias gamma coding
 
-zx0_elias_bt       lsl zx0_bit         ; get next bit
+zx0_elias_loop     lsl zx0_bit         ; get next bit
                    rolb                ; rotate elias value
                    rola                ;   "     "     "
 zx0_elias_start    lsl zx0_bit         ; get next bit
-                   bne zx0_skip2       ; branch if bit stream is not empty
+                   bne zx0_elias_bt    ; branch if bit stream is not empty
                    ifndef ZX0_VAR3
                      pshs a            ; save reg A
                    else
@@ -157,7 +156,7 @@ zx0_elias_start    lsl zx0_bit         ; get next bit
                    else
                      lda ZX0_VAR3      ; restore reg A
                    endc
-zx0_skip2          bcc zx0_elias_bt    ; loop until done
+zx0_elias_bt       bcc zx0_elias_loop  ; loop until done
 zx0_eof            rts                 ; return
 
 
