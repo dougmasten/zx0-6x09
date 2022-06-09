@@ -1,4 +1,4 @@
-; zx0_v1_6309_mega.asm - ZX0 decompressor for H6309 - 149 bytes
+; zx0_6309_mega.asm - ZX0 decompressor for H6309 - 149 bytes
 ; Written for the LWTOOLS assembler, http://www.lwtools.ca/.
 ;
 ; Copyright (c) 2021 Doug Masten
