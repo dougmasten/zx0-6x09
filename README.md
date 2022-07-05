@@ -6,7 +6,7 @@
 
 To compress a file, use the command-line compressor from https://github.com/emmanuel-marty/salvador with the "-classic" flag.
 
-_**WARNING**: The ZX0 file format was changed in version 2. This library still uses version 1._
+_**WARNING**: The ZX0 file format was changed in version 2. This library still uses version 1. There are currently no plans for a version 2 as the version 1 format is optimal for the M6809/H6309 processor. A version 2 decompressor would be both slower and use slightly more space._
 
 ## Projects using **zx0-6x09**:
 
