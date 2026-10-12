@@ -1,4 +1,4 @@
-; zx0_6309_turbo.asm - ZX0 decompressor for H6309 - 114 bytes
+; zx0_6309_turbo.asm - ZX0 decompressor for H6309 - 111 bytes
 ; Written for the LWTOOLS assembler, http://www.lwtools.ca/.
 ;
 ; Copyright (c) 2021 Doug Masten
@@ -70,10 +70,8 @@ zx0_decompress     ldq #$80000001      ; init bit stream and elias = 1
 
 ; 1 - copy from new offset (repeat N bytes from new offset)
 zx0_new_offset     zx0_elias_full      ; obtain MSB offset
-                   comf                ; adjust for negative offset (set carry for RORW below)
-                   incf                ;   "     "    "       "
-                   beq zx0_rts         ; eof? (length = 256) if so exit
-                   tfr f,e             ; move to MSB position
+                   subr f,e            ; MSB offset = -MSB elias (set carry for RORW below)
+                   bcc zx0_rts         ; eof? (MSB elias = 256) if so exit
                    ldf ,x+             ; obtain LSB offset
                    rorw                ; last offset bit becomes first length bit
                    tfr w,y             ; preserve offset value (ADDR would destroy carry)

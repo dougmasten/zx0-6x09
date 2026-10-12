@@ -1,4 +1,4 @@
-; zx0_6309_mega.asm - ZX0 decompressor for H6309 - 124 bytes
+; zx0_6309_mega.asm - ZX0 decompressor for H6309 - 121 bytes
 ; Written for the LWTOOLS assembler, http://www.lwtools.ca/.
 ;
 ; Copyright (c) 2021 Doug Masten
@@ -71,10 +71,8 @@ zx0_decompress     ldq #$80000001      ; init bit stream and elias = 1
 
 ; 1 - copy from new offset (repeat N bytes from new offset)
 zx0_new_offset     zx0_elias
-                   comf
-                   incf
-                   beq zx0_rts
-                   tfr f,e
+                   subr f,e            ; MSB offset = -MSB elias (set carry for RORW below)
+                   bcc zx0_rts         ; eof? (MSB elias = 256) if so exit
                    ldf ,x+
                    rorw
                    tfr w,y             ; save offset (ADDR would destroy carry)

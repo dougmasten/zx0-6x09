@@ -18,9 +18,9 @@ Each processor has three versions trading code size for speed. Speeds are averag
 | 6809/zx0_6809_turbo.asm | 155-167 | 38.2 |
 | 6809/zx0_6809_mega.asm | 360-371 | 27.1 |
 | 6809/zx0_6809_mega_back.asm | 373-384 | 27.9 (backward) |
-| 6309/zx0_6309_standard.asm | 74 | 19.2 (22.9 in 6809 emulation mode) |
-| 6309/zx0_6309_turbo.asm | 114 | 16.9 (20.2 in 6809 emulation mode) |
-| 6309/zx0_6309_mega.asm | 124 | 15.7 (18.8 in 6809 emulation mode) |
+| 6309/zx0_6309_standard.asm | 71 | 18.8 (22.0 in 6809 emulation mode) |
+| 6309/zx0_6309_turbo.asm | 111 | 16.5 (19.3 in 6809 emulation mode) |
+| 6309/zx0_6309_mega.asm | 121 | 15.3 (17.9 in 6809 emulation mode) |
 
 M6809 sizes depend on the assembly options set at the top of each file. H6309 speeds are for native mode unless noted.
 

@@ -1,4 +1,4 @@
-; zx0_6309_standard.asm - ZX0 decompressor for H6309 - 74 bytes
+; zx0_6309_standard.asm - ZX0 decompressor for H6309 - 71 bytes
 ; Written for the LWTOOLS assembler, http://www.lwtools.ca/.
 ;
 ; Copyright (c) 2021 Doug Masten
@@ -53,10 +53,8 @@ zx0_copy           tfm y+,u+           ; copy match
 
 ; 1 - copy from new offset (repeat N bytes from new offset)
 zx0_new_offset     bsr zx0_elias       ; obtain MSB offset
-                   comf                ; adjust for negative offset (set carry for RORW below)
-                   incf                ;   "     "    "       "
-                   beq zx0_rts         ; eof? (offset = 256) if so exit
-                   tfr f,e             ; move to MSB position
+                   subr f,e            ; MSB offset = -MSB elias (set carry for RORW below)
+                   bcc zx0_rts         ; eof? (MSB elias = 256) if so exit
                    ldf ,x+             ; obtain LSB offset
                    rorw                ; offset bit #0 becomes first length bit
                    tfr w,y             ; preserve new offset (ADDR would destroy carry)
