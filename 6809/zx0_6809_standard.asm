@@ -1,4 +1,4 @@
-; zx0_6809_standard.asm - ZX0 decompressor for M6809 - 90 bytes (100 for no options)
+; zx0_6809_standard.asm - ZX0 decompressor for M6809 - 103 bytes (109 for no options)
 ; Written for the LWTOOLS assembler, http://www.lwtools.ca/.
 ;
 ; Copyright (c) 2021 Doug Masten
@@ -38,8 +38,10 @@
 ;       ex. ZX0_VAR1 equ $23
 ;
 ;   ZX0_VAR2
-;     Defined variable to point to two bytes of DP memory for a space
-;     optimization.
+;     Defined variable to point to two bytes of DP memory to hold the match
+;     offset instead of self-modifying code. Costs 1 byte and is slower.
+;     Use together with ZX0_VAR1 for code that never writes to itself
+;     (ex. running from ROM).
 ;       ex. ZX0_VAR2 equ $24
 ;
 ;   ZX0_VAR3
@@ -89,7 +91,6 @@ zx0_offset         equ ZX0_VAR2        ; use DP memory
 
 ; 0 - literal (copy next N bytes from compressed data)
 zx0_literals       bsr zx0_elias       ; obtain length
-                   tfr d,y             ;  "      "
                    bsr zx0_copy_bytes  ; copy literals
                    bcs zx0_new_offset  ; branch if next block is new-offset
 
@@ -101,13 +102,14 @@ zx0_copy           equ *
                    else
                      stx ZX0_VAR3      ; save reg X
                    endc
-                   tfr d,y             ; setup length
                    ifndef ZX0_VAR2
 zx0_offset           equ *+2
                      leax >$ffff,u     ; calculate offset address
                    else
+                     tfr d,y           ; save length
                      ldd zx0_offset    ; calculate offset address
                      leax d,u          ; from stored value
+                     tfr y,d           ; restore length
                    endc
                    bsr zx0_copy_bytes  ; copy match
                    ifndef ZX0_VAR3
@@ -167,12 +169,21 @@ zx0_elias_bt       bcc zx0_elias_loop  ; loop until done
 zx0_eof            rts                 ; return
 
 
-; copy Y bytes from X to U and get next bit
-zx0_copy_bytes     ldb ,x+             ; copy byte
+; copy D bytes from X to U and get next bit
+zx0_copy_long      tfr d,y             ; setup 16-bit loop counter
+loop@              ldb ,x+             ; copy byte
                    stb ,u+             ;  "    "
                    leay -1,y           ; decrement loop counter
-                   bne zx0_copy_bytes  ; loop until done
-                   lsl zx0_bit         ; get next bit
+                   bne loop@           ; loop until done
+                   bra zx0_copy_done
+
+zx0_copy_bytes     tsta                ; length > 255?
+                   bne zx0_copy_long   ; yes, branch
+loop@              lda ,x+             ; copy byte
+                   sta ,u+             ;  "    "
+                   decb                ; decrement loop counter
+                   bne loop@           ; loop until done
+zx0_copy_done      lsl zx0_bit         ; get next bit
                    rts
 
 

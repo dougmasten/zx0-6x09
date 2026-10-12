@@ -6,7 +6,22 @@
 
 To compress a file, use the command-line compressor from https://github.com/emmanuel-marty/salvador with the "-classic" flag.
 
-_**WARNING**: The ZX0 file format was changed in version 2. This library still uses version 1. There are currently no plans for a version 2 as the version 1 format is optimal for the M6809/H6309 processor. A version 2 decompressor would be both slower and use slightly more space._
+_**WARNING**: The ZX0 file format was changed in version 2. This library still uses version 1. There are currently no plans for a version 2 as it offers no benefit on the M6809/H6309 processor. Version 2 only inverts the bits of the offset MSB, so compression ratio is identical and a version 2 decompressor would run at the same speed. Only the M6809 standard version would be slightly larger (2 bytes)._
+
+## Versions
+
+Each processor has three versions trading code size for speed. Speeds are average CPU cycles per decompressed byte, measured with a cycle-counting simulator over a 97K test set of ROMs, binaries and text.
+
+| Version | Size (bytes) | Speed (cycles/byte) |
+|---|---|---|
+| 6809/zx0_6809_standard.asm | 103-110 | 50.8 |
+| 6809/zx0_6809_turbo.asm | 155-167 | 38.2 |
+| 6809/zx0_6809_mega.asm | 176-188 | 36.9 |
+| 6309/zx0_6309_standard.asm | 74 | 19.2 (22.9 in 6809 emulation mode) |
+| 6309/zx0_6309_turbo.asm | 114 | 16.9 (20.2 in 6809 emulation mode) |
+| 6309/zx0_6309_mega.asm | 124 | 15.7 (18.8 in 6809 emulation mode) |
+
+M6809 sizes depend on the assembly options set at the top of each file. H6309 speeds are for native mode unless noted.
 
 ## Projects using **zx0-6x09**:
 

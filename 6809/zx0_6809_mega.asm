@@ -1,4 +1,4 @@
-; zx0_6809_mega.asm - ZX0 decompressor for M6809 - 189 bytes
+; zx0_6809_mega.asm - ZX0 decompressor for M6809 - 188 bytes
 ; Written for the LWTOOLS assembler, http://www.lwtools.ca/.
 ;
 ; Copyright (c) 2021 Doug Masten
@@ -21,24 +21,21 @@
 ; 3. This notice may not be removed or altered from any source distribution.
 
 
-; only get one bit from stream
-zx0_get_1bit       macro
-                   lsla                ; get next bit
-                   bne done@           ; is bit stream empty? no, branch
-                   lda ,x+             ; load another group of 8 bits
-                   rola                ; get next bit
-done@              equ *
-                   endm
 
-; get elias value
-zx0_elias_bt       macro
-                   bcs done@
+; get offset MSB elias value into reg B (256 wraps to 0)
+zx0_elias_msb      macro
+                   ldb #1              ; set elias = 1
+                   lsla                ; get next bit
+                   bcc loop@           ; more elias bits? yes, branch
+                   bne done@           ; is bit stream empty? no, branch (elias = 1)
+reload@            lda ,x+             ; load another group of 8 bits
+                   rola                ; get next bit
+                   bcs done@           ; are we done? yes, branch
 loop@              lsla                ; get next bit
                    rolb                ; rotate bit into elias value
                    lsla                ; get next bit
                    bcc loop@           ; loop until done
-                   bne done@           ; is bit stream empty? no, branch
-                   bsr zx0_reload      ; process rest of elias until done
+                   beq reload@         ; is bit stream empty? yes, refill it
 done@              equ *
                    endm
 
@@ -92,90 +89,113 @@ zx0_dp             equ */256
                    bra zx0_literals    ; start with literals
 
                    ifndef ZX0_DISABLE_SAVE_REGS
-zx0_eof            puls cc,dp,pc       ; restore registers and exit
+zx0_exit           puls cc,dp,pc       ; restore registers and exit
                    else
-zx0_eof            equ zx0_rts         ; just exit
+zx0_exit           equ zx0_rts         ; just exit
                    endc
 
 
 ; 1 - copy from new offset (repeat N bytes from new offset)
-zx0_new_offset     ldb #1              ; set elias = 1 (not necessary to set MSB)
-                   zx0_get_1bit        ; obtain MSB offset
-                   zx0_elias_bt        ;  "      "   "
-                   clr <zx0_code+1     ; set MSB elias for below
+zx0_new_offset     zx0_elias_msb       ; obtain MSB offset
                    negb                ; adjust for negative offset (set carry for RORB below)
-                   beq zx0_eof         ; eof? (length = 256) if so exit
+                   beq zx0_exit        ; eof? (length = 256) if so exit
                    rorb                ; last offset bit becomes first length bit
                    stb <zx0_offset+2   ; save MSB offset
                    ldb ,x+             ; load LSB offset
                    rorb                ; last offset bit becomes first length bit
                    stb <zx0_offset+3   ; save LSB offset
+                   bcs zx0_length2     ; test first length bit (length = 2)
                    ldb #1              ; set elias = 1
-                   zx0_elias_bt        ; get elias but skip first bit
-skip@              incb                ; elias = elias + 1
-                   stb <zx0_code+2     ;  " "
-                   bne zx0_copy        ;  " "
-                   inc <zx0_code+1     ;  " "
+                   bsr zx0_elias_loop  ; get elias but skip first bit
+                   leay 1,y            ; elias = elias + 1
+                   bra zx0_copy        ; go copy match
+zx0_length2        ldy #2              ; length = 2
 zx0_copy           stx <save_x@+1      ; save reg X
-zx0_code           ldx #$ffff          ; setup length
-zx0_offset         leay >$ffff,u       ; calculate offset address
-loop@              ldb ,y+             ; copy match
+zx0_offset         leax >$ffff,u       ; calculate offset address
+loop@              ldb ,x+             ; copy match
                    stb ,u+             ;  "    "
-                   leax -1,x           ; decrement loop counter
+                   leay -1,y           ; decrement loop counter
                    bne loop@           ; loop until done
 save_x@            ldx #$ffff          ; restore reg X
                    lsla                ; get next bit
                    bcs zx0_new_offset  ; branch if next block is new offset
 
 ; 0 - literal (copy next N bytes from compressed data)
-zx0_literals       ldb #1              ; set elias = 1
-                   clr <zx0_code+1     ;  "    "
-                   zx0_get_1bit        ; obtain length
-                   zx0_elias_bt        ;  "      "
-                   stb <zx0_code+2     ; save LSB elias
-                   ldy <zx0_code+1     ; setup length
+zx0_literals       lsla                ; get next bit
+                   bcs zx0_literal1    ; length = 1? (or bit stream empty)
+zx0_literals_more  ldb #1              ; set elias = 1
+                   bsr zx0_elias_loop  ; obtain length
 loop@              ldb ,x+             ; copy literals
                    stb ,u+             ;  "    "
                    leay -1,y           ; decrement loop counter
                    bne loop@           ; loop until done
-                   lsla                ; get next bit
+zx0_literals_done  lsla                ; get next bit
                    bcs zx0_new_offset  ; branch if next block is new offset
 
 ; 0 - copy from last offset (repeat N bytes from last offset)
-                   ldb #1              ; set elias = 1
-                   clr <zx0_code+1     ;  "    "
-                   zx0_get_1bit        ; obtain length
-                   zx0_elias_bt        ;  "      "
-                   stb <zx0_code+2     ; save LSB elias
+                   lsla                ; get next bit
+                   bcs zx0_last1       ; length = 1? (or bit stream empty)
+zx0_last_more      ldb #1              ; set elias = 1
+                   bsr zx0_elias_loop  ; obtain length
                    bra zx0_copy        ; go copy last offset block
 
-; interlaced elias gamma coding
+zx0_last1          bne skip@           ; is bit stream empty? no, branch (length = 1)
+                   lda ,x+             ; load another group of 8 bits
+                   rola                ; get next bit
+                   bcc zx0_last_more   ; more elias bits? yes, branch
+skip@              ldy #1              ; length = 1
+                   bra zx0_copy        ; go copy last offset block
+
+zx0_literal1       bne skip@           ; is bit stream empty? no, branch (length = 1)
+                   lda ,x+             ; load another group of 8 bits
+                   rola                ; get next bit
+                   bcc zx0_literals_more ; more elias bits? yes, branch
+skip@              ldb ,x+             ; copy one literal
+                   stb ,u+             ;  "   "     "
+                   bra zx0_literals_done ; get next block
+
+
+; interlaced elias gamma coding (returns value in reg Y)
+zx0_elias_loop     lsla                ; get next bit
+                   rolb                ; rotate bit into elias value
+                   lsla                ; get next bit
+                   bcc zx0_elias_loop  ; loop until done
+                   beq zx0_reload      ; is bit stream empty? yes, refill it
+zx0_elias_done     stb <zx0_length+1   ; return elias value in reg Y
+                   ldy <zx0_length     ;  "      "     "    "  "   "
+zx0_rts            rts                 ; return
+
+; elias value can't exceed 8 bits until after a reload
 zx0_reload         lda ,x+             ; load another group of 8 bits
                    rola                ; are we done?
-                   bcs zx0_rts         ; yes, exit
+                   bcs zx0_elias_done  ; yes, exit
                    lsla                ; get next bit
                    rolb                ; rotate bit into elias value
                    lsla                ; are we done?
-                   bcs zx0_rts         ; yes, exit
+                   bcs zx0_elias_done  ; yes, exit
                    lsla                ; get next bit
                    rolb                ; rotate bit into elias value
                    lsla                ; are we done?
-                   bcs zx0_rts         ; yes, exit
+                   bcs zx0_elias_done  ; yes, exit
                    lsla                ; get next bit
                    rolb                ; rotate bit into elias value
                    lsla                ; are we done?
-                   bcs zx0_rts         ; yes, exit
+                   bcs zx0_elias_done  ; yes, exit
 
 ; long elias gamma coding
 loop@              lsla                ; get next bit
                    rolb                ; rotate bit into elias value
-                   rol <zx0_code+1     ;  "      "   "    "     "
+                   rol <zx0_length     ;  "      "   "    "     "
                    lsla                ; is bit stream empty?
                    bne skip@           ; no, branch
                    lda ,x+             ; reload bit stream
                    rola                ; are we done?
 skip@              bcc loop@           ; no, loop again
-zx0_rts            rts                 ; return
+                   bsr zx0_elias_done  ; return elias value in reg Y
+                   clr <zx0_length     ; reset MSB for next time
+                   rts
+
+zx0_length         fdb 0               ; elias value (MSB must be zero)
 
 
 ; safety check

@@ -1,4 +1,4 @@
-; zx0_6309_mega.asm - ZX0 decompressor for H6309 - 149 bytes
+; zx0_6309_mega.asm - ZX0 decompressor for H6309 - 124 bytes
 ; Written for the LWTOOLS assembler, http://www.lwtools.ca/.
 ;
 ; Copyright (c) 2021 Doug Masten
@@ -21,24 +21,34 @@
 ; 3. This notice may not be removed or altered from any source distribution.
 
 
-; only get one bit from stream
-zx0_get_1bit       macro
+
+; get elias value
+zx0_elias          macro
                    lsla                ; get next bit
-                   bne done@           ; is bit stream empty? no, branch
-                   lda ,x+             ; load another group of 8 bits
+                   bcc loop@           ; more elias bits? yes, branch
+                   bne done@           ; is bit stream empty? no, branch (elias = 1)
+reload@            lda ,x+             ; load another group of 8 bits
                    rola                ; get next bit
+                   bcs done@           ; are we done? yes, branch
+loop@              lsla                ; get next bit
+                   rolw                ; rotate bit into elias value
+                   lsla                ; get next bit
+                   bcc loop@           ; loop until done
+                   beq reload@         ; is bit stream empty? yes, refill it
 done@              equ *
                    endm
 
-; get elias value
+; get elias value (first bit already in carry)
 zx0_elias_bt       macro
-                   bcs done@
+                   bcs done@           ; are we done? yes, branch
 loop@              lsla                ; get next bit
                    rolw                ; rotate bit into elias value
                    lsla                ; get next bit
                    bcc loop@           ; loop until done
                    bne done@           ; is bit stream empty? no, branch
-                   bsr zx0_reload      ; process rest of elias until done
+                   lda ,x+             ; load another group of 8 bits
+                   rola                ; get next bit
+                   bcc loop@           ; loop until done
 done@              equ *
                    endm
 
@@ -49,65 +59,44 @@ done@              equ *
 ;             : Reg U = start of decompression buffer
 ; Exit        : Reg X = end of compressed data + 1
 ;             : Reg U = end of decompression buffer + 1
-; Destroys    : Regs D, V, W, Y
+; Destroys    : Regs D, W, Y
 ; Description : Decompress ZX0 data (version 1)
+;
+; Reg Y always holds the match source address (U + offset). Since TFM Y+,U+
+; advances both registers equally it only needs adjusting after literals.
 ;------------------------------------------------------------------------------
-zx0_decompress     ldq #$ffff0001      ; init offset = -1 and elias = 1
-                   tfr d,v             ; preserve offset
-                   lda #$80            ; init bit stream
+zx0_decompress     ldq #$80000001      ; init bit stream and elias = 1
+                   leay -1,u           ; init offset = -1
                    bra zx0_literals
 
 ; 1 - copy from new offset (repeat N bytes from new offset)
-zx0_new_offset     zx0_get_1bit
-                   zx0_elias_bt
+zx0_new_offset     zx0_elias
                    comf
                    incf
                    beq zx0_rts
                    tfr f,e
                    ldf ,x+
                    rorw
-                   tfr w,v
+                   tfr w,y             ; save offset (ADDR would destroy carry)
                    ldw #1              ; set elias = 1
                    zx0_elias_bt
                    incw
-zx0_copy           tfr u,y
-                   addr v,y
-                   tfm y+,u+           ; copy match
+                   addr u,y            ; calculate match address
+zx0_copy           tfm y+,u+           ; copy match
                    incw                ; set elias = 1
                    lsla
                    bcs zx0_new_offset
 
 ; 0 - literal (copy next N bytes)
-zx0_literals       zx0_get_1bit
-                   zx0_elias_bt
+zx0_literals       zx0_elias
+                   addr w,y            ; keep match address in step with reg U
                    tfm x+,u+           ; copy literals
                    incw                ; set elias = 1
                    lsla                ; copy from last offset or new offset?
                    bcs zx0_new_offset
 
 ; 0 - copy from last offset (repeat N bytes from last offset)
-                   zx0_get_1bit
-                   zx0_elias_bt
+                   zx0_elias
                    bra zx0_copy
 
-
-; interlaced elias gamma coding
-loop@              lsla                ; get next bit
-                   rolw                ; rotate bit into elias value
-                   lsla                ; get next bit
-zx0_reload         lda ,x+             ; load another group of 8 bits
-                   rola
-                   bcs zx0_rts
-                   lsla                ; get next bit
-                   rolw                ; rotate bit into elias value
-                   lsla                ; get next bit
-                   bcs zx0_rts
-                   lsla                ; get next bit
-                   rolw                ; rotate bit into elias value
-                   lsla                ; get next bit
-                   bcs zx0_rts
-                   lsla                ; get next bit
-                   rolw                ; rotate bit into elias value
-                   lsla                ; get next bit
-                   bcc loop@
-zx0_rts            rts
+zx0_rts            rts                 ; return
