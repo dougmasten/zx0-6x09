@@ -17,13 +17,16 @@ Each processor has three versions trading code size for speed. Speeds are averag
 | 6809/zx0_6809_standard.asm | 103-110 | 50.8 |
 | 6809/zx0_6809_turbo.asm | 155-167 | 38.2 |
 | 6809/zx0_6809_mega.asm | 360-371 | 27.1 |
+| 6809/zx0_6809_mega_back.asm | 373-384 | 27.9 (backward) |
 | 6309/zx0_6309_standard.asm | 74 | 19.2 (22.9 in 6809 emulation mode) |
 | 6309/zx0_6309_turbo.asm | 114 | 16.9 (20.2 in 6809 emulation mode) |
 | 6309/zx0_6309_mega.asm | 124 | 15.7 (18.8 in 6809 emulation mode) |
 
 M6809 sizes depend on the assembly options set at the top of each file. H6309 speeds are for native mode unless noted.
 
-The M6809 mega version copies two bytes at a time. Only its first ~200 bytes must stay within one 256-byte page (the assembler reports an error if they cross); the rarely used code after that may be anywhere.
+The M6809 mega versions copy two bytes at a time. Only their first ~200-220 bytes must stay within one 256-byte page (the assembler reports an error if they cross); the rarely used code after that may be anywhere.
+
+The backward version decompresses from the end of the data toward the start. Compress with salvador's "-classic -b" flags, then call it with reg X = end of compressed data + 1 and reg U = end of decompression buffer + 1.
 
 ## Projects using **zx0-6x09**:
 
